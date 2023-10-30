@@ -90,24 +90,29 @@ public:
     if (nh.hasParam("corner_refinement"))
       ROS_WARN(
           "Corner refinement options have been removed in ArUco 3.0.0, corner_refinement ROS parameter is deprecated");
-
+    // mDetector.setParameters()
     aruco::MarkerDetector::Params params = mDetector.getParameters();
     std::string thresh_method;
+    // params.thresMethod = aruco::MarkerDetector::ThresMethod::THRES_AUTO_FIXED;
+    // mDetector.setParameters(params);
+    params = mDetector.getParameters();
     switch (params.thresMethod)
     {
       case aruco::MarkerDetector::ThresMethod::THRES_ADAPTIVE:
         thresh_method = "THRESH_ADAPTIVE";
+        ROS_ERROR("Threshold method: Adaptive");
         break;
       case aruco::MarkerDetector::ThresMethod::THRES_AUTO_FIXED:
         thresh_method = "THRESH_AUTO_FIXED";
+        ROS_ERROR("Threshold method: Autofixed");
         break;
       default:
         thresh_method = "UNKNOWN";
+        ROS_ERROR("Threshold method: Unknown");
         break;
     }
 
     // Print parameters of ArUco marker detector:
-    ROS_INFO_STREAM("Threshold method: " << thresh_method);
 
     float min_marker_size; // percentage of image area
     nh.param<float>("min_marker_size", min_marker_size, 0.02);
@@ -211,6 +216,7 @@ public:
         for (std::size_t i = 0; i < markers.size(); ++i)
         {
           // only publishing the selected marker
+          ROS_INFO("Marker being detected is %d", markers[i].id);
           if (markers[i].id == marker_id)
           {
             tf::Transform transform = aruco_ros::arucoMarker2Tf(markers[i]);

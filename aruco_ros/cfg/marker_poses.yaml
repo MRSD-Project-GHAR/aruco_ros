@@ -1,0 +1,6 @@
+markers:
+  - id: 45
+    pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] # x y z qx qy qz qw
+
+  - id: 2
+    pose: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] # x y z qx qy qz qw
