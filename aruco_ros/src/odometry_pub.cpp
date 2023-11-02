@@ -46,12 +46,11 @@ public:
     cam_info_sub_ =
         nh.subscribe("/camera_info", 1, &ArucoOdometry::camInfoCallback, this);
     image_pub_ = it.advertise("result", 1);
-    // debug_image_pub_ = it.advertise("mydebug", 1);
 
     odom_pub_ = nh.advertise<nav_msgs::Odometry>("/odom", 1);
     cam_info_received_ = false;
 
-    odom.header.frame_id = "camera";
+    odom.header.frame_id = "camera_link";
     odom.child_frame_id = "odom";
     odom.header.seq = 0;
 
@@ -62,7 +61,7 @@ public:
     cam_param_ =
         aruco_ros::rosCameraInfo2ArucoCamParams(msg, use_rectified_image_);
     cam_info_received_ = true;
-    cam_info_sub_.shutdown();
+    // cam_info_sub_.shutdown();
   }
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg) {
@@ -80,68 +79,66 @@ public:
       }
 
       cv::Mat in_image_grey;
-      cv::cvtColor(in_image, in_image_grey, cv::COLOR_BGR2GRAY);
-
-      cv::medianBlur(in_image_grey, in_image, 5);
-      cv::adaptiveThreshold(in_image_grey, in_image_grey, 255,
-                            cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV,
-                            3, 2);
-
-      cv::cvtColor(in_image_grey, in_image, cv::COLOR_GRAY2BGR);
-
-      // detection results will go into 0
       std::vector<aruco::Marker> markers;
 
       // ok, let's detect
       m_detector_.detect(in_image, markers, cam_param_, marker_size_, false);
       // for each marker, draw info and its boundaries in the image
-
+      tf::Transform camera_in_world_frame;
       ROS_INFO("Number of aruco markers detected: %d", int(markers.size()));
+      std::vector<int> unknown_ids;
+      bool odom_calculated = false;
       for (unsigned int i = 0; i < markers.size(); i++) {
-        if (marker_poses_.find(markers[i].id) == marker_poses_.end()) {
-          ROS_ERROR_STREAM("The definition for this aruco marker doesn't "
-                           "exist in the library!");
-          ROS_ERROR_STREAM("Offending Aruco ID detected: " << markers[i].id);
-          continue;
-        }
 
         markers[i].draw(in_image, cv::Scalar(0, 0, 255), 2);
 
         tf::Transform camera_in_aruco_frame =
             aruco_ros::arucoMarker2Tf(markers[i]).inverse();
 
+        if (marker_poses_.find(markers[i].id) == marker_poses_.end()) {
+
+          ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
+                          << markers[i].id << "is unknown.");
+          unknown_ids.push_back(i);
+          continue;
+        }
+
         tf::Transform aruco_in_world_frame = marker_poses_.at(markers[i].id);
-
-        tf::Transform camera_in_world_frame =
-            camera_in_aruco_frame * aruco_in_world_frame;
-
-        odom.header.stamp = ros::Time::now();
-        odom.header.seq++;
-
+        camera_in_world_frame = aruco_in_world_frame * camera_in_aruco_frame;
         tf::poseTFToMsg(camera_in_world_frame, odom.pose.pose);
-
-        odom_pub_.publish(odom);
-
-        // if (debug_image_pub_.getNumSubscribers() > 0) {
-        //   // show input with augmented information
-        //   cv_bridge::CvImage out_msg;
-        //   out_msg.header.stamp = curr_stamp;
-        //   out_msg.encoding = sensor_msgs::image_encodings::RGB8;
-        //   out_msg.image = in_image;
-        //   image_pub_.publish(out_msg.toImageMsg());
-        // }
-
-        return;
+        odom_calculated = true;
       }
 
-      if (image_pub_.getNumSubscribers() > 0) {
-        // show input with augmented information
-        cv_bridge::CvImage out_msg;
-        out_msg.header.stamp = curr_stamp;
-        out_msg.encoding = sensor_msgs::image_encodings::RGB8;
-        out_msg.image = in_image;
-        image_pub_.publish(out_msg.toImageMsg());
+      if (odom_calculated) {
+        for (int index : unknown_ids) {
+          tf::Transform aruco_in_camera_frame =
+              aruco_ros::arucoMarker2Tf(markers[index]);
+
+          tf::Transform aruco_in_world_frame =
+              camera_in_world_frame * aruco_in_camera_frame;
+
+          geometry_msgs::Pose aruco_pose;
+          tf::poseTFToMsg(aruco_in_world_frame, aruco_pose);
+          ROS_WARN_STREAM(
+              "Id: " << markers[index].id << ", pose is (x,y,z,qx,qy,qz,qw): "
+                     << aruco_pose.position.x << ", " << aruco_pose.position.y
+                     << ", " << aruco_pose.position.z << ", "
+                     << aruco_pose.orientation.x << ", "
+                     << aruco_pose.orientation.y << ", "
+                     << aruco_pose.orientation.z << ", "
+                     << aruco_pose.orientation.w);
+        }
       }
+
+      odom.header.stamp = ros::Time::now();
+      odom.header.seq++;
+      odom_pub_.publish(odom);
+
+      cv_bridge::CvImage out_msg;
+      out_msg.header.stamp = ros::Time::now();
+      out_msg.encoding = sensor_msgs::image_encodings::RGB8;
+      out_msg.image = in_image;
+      image_pub_.publish(out_msg.toImageMsg());
     }
   }
 
