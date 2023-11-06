@@ -46,6 +46,9 @@
 #include <tf/transform_listener.h>
 #include <std_msgs/UInt32MultiArray.h>
 
+#include <aruco_msgs/AprilTagDetection.h>
+#include <aruco_msgs/AprilTagDetectionArray.h>
+
 class ArucoMarkerPublisher
 {
 private:
@@ -77,6 +80,10 @@ private:
   cv::Mat inImage_;
   bool useCamInfo_;
   std_msgs::UInt32MultiArray marker_list_msg_;
+
+  aruco_msgs::AprilTagDetection apriltag_detection_;
+  aruco_msgs::AprilTagDetectionArray::Ptr apriltags_msg_;
+  ros::Publisher apriltag_pub_;
 
 public:
   ArucoMarkerPublisher() :
@@ -111,6 +118,11 @@ public:
     marker_msg_ = aruco_msgs::MarkerArray::Ptr(new aruco_msgs::MarkerArray());
     marker_msg_->header.frame_id = reference_frame_;
     marker_msg_->header.seq = 0;
+
+    apriltag_pub_ = nh_.advertise<aruco_msgs::AprilTagDetectionArray>("/tag_detections", 100);
+    apriltags_msg_ = aruco_msgs::AprilTagDetectionArray::Ptr(new aruco_msgs::AprilTagDetectionArray());
+    apriltags_msg_->header.frame_id = reference_frame_;
+    apriltags_msg_->header.seq = 0;
   }
 
   bool getTransform(const std::string& refFrame, const std::string& childFrame, tf::StampedTransform& transform)
@@ -149,6 +161,7 @@ public:
 
     if (!publishMarkers && !publishMarkersList && !publishImage && !publishDebug)
       return;
+    ROS_DEBUG("receiving image");
 
     ros::Time curr_stamp = msg->header.stamp;
     cv_bridge::CvImagePtr cv_ptr;
@@ -162,7 +175,7 @@ public:
 
       // ok, let's detect
       mDetector_.detect(inImage_, markers_, camParam_, marker_size_, false);
-
+      ROS_DEBUG("number of markers detected: %d", (int)markers_.size());
       // marker array publish
       if (publishMarkers)
       {
@@ -177,6 +190,26 @@ public:
           marker_i.header.stamp = curr_stamp;
           marker_i.id = markers_.at(i).id;
           marker_i.confidence = 1.0;
+        }
+
+        apriltags_msg_->detections.clear();
+        apriltags_msg_->detections.resize(markers_.size());
+        apriltags_msg_->header.stamp = curr_stamp;
+        apriltags_msg_->header.seq++;
+
+        for (std::size_t i = 0; i < markers_.size(); ++i)
+        {
+          aruco_msgs::AprilTagDetection & apriltag_i = apriltags_msg_->detections.at(i);
+        //   // apriltag_i.header.stamp = curr_stamp;
+          apriltag_i.id.push_back(markers_.at(i).id);
+          // apriltag_i.size = marker_size_;
+        //   // apriltag_i.pose.pose.position.x = markers_.at(i).Tvec.at<float>(0, 0);
+        //   // apriltag_i.pose.pose.position.y = markers_.at(i).Tvec.at<float>(1, 0);
+        //   // apriltag_i.pose.pose.position.z = markers_.at(i).Tvec.at<float>(2, 0);
+        //   // apriltag_i.pose.pose.orientation.x = markers_.at(i).Rvec.at<float>(0, 0);
+        //   // apriltag_i.pose.pose.orientation.y = markers_.at(i).Rvec.at<float>(1, 0);
+        //   // apriltag_i.pose.pose.orientation.z = markers_.at(i).Rvec.at<float>(2, 0);
+        //   // apriltag_i.pose.pose.orientation.w = 1.0;
         }
 
         // if there is camera info let's do 3D stuff
@@ -197,14 +230,28 @@ public:
             aruco_msgs::Marker & marker_i = marker_msg_->markers.at(i);
             tf::Transform transform = aruco_ros::arucoMarker2Tf(markers_[i]);
             transform = static_cast<tf::Transform>(cameraToReference) * transform;
-            tf::poseTFToMsg(transform, marker_i.pose.pose);
+            // tf::poseTFToMsg(transform, marker_i.pose.pose);
+            geometry_msgs::Pose pose;
+            tf::poseTFToMsg(transform, pose);
+            marker_i.pose.pose = pose;
             marker_i.header.frame_id = reference_frame_;
+            
+            aruco_msgs::AprilTagDetection & apriltag_i = apriltags_msg_->detections.at(i);
+            // apriltag_i.id.push_back(markers_.at(i).id);
+            geometry_msgs::PoseWithCovarianceStamped poseCovStamped;
+            poseCovStamped.header.stamp = curr_stamp;
+            poseCovStamped.header.frame_id = reference_frame_;
+            poseCovStamped.pose.pose = pose;
+            apriltag_i.pose = poseCovStamped;
           }
         }
 
         // publish marker array
         if (marker_msg_->markers.size() > 0)
+        {
           marker_pub_.publish(marker_msg_);
+          apriltag_pub_.publish(apriltags_msg_);
+        }
       }
 
       if (publishMarkersList)
@@ -214,6 +261,8 @@ public:
           marker_list_msg_.data[i] = markers_[i].id;
 
         marker_list_pub_.publish(marker_list_msg_);
+
+        
       }
 
       // draw detected markers on the image for visualization
