@@ -14,6 +14,7 @@
         <param name="marker_size"        value="$(arg markerSize)"/>
         <param name="reference_frame"    value="$(arg ref_frame)"/>   <!-- frame in which the marker pose will be refered -->
         <param name="camera_frame"       value="$(arg side)_hand_camera"/>
+        <rosparam file="$(find aruco_ros)/cfg/marker_poses.yaml" command="load" />
     </node>
 
 </launch>

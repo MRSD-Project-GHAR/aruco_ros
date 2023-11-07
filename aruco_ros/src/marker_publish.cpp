@@ -34,6 +34,7 @@
  */
 
 #include <iostream>
+#include <unordered_map>
 #include <aruco/aruco.h>
 #include <aruco/cvdrawingutils.h>
 
@@ -86,6 +87,9 @@ private:
   ros::Publisher apriltag_pub_;
 
 public:
+  XmlRpc::XmlRpcValue markers_list;
+  std::unordered_map<int, tf::Transform> marker_poses_;
+
   ArucoMarkerPublisher() :
       nh_("~"), it_(nh_), useCamInfo_(true)
   {
@@ -123,6 +127,31 @@ public:
     apriltags_msg_ = aruco_msgs::AprilTagDetectionArray::Ptr(new aruco_msgs::AprilTagDetectionArray());
     apriltags_msg_->header.frame_id = reference_frame_;
     apriltags_msg_->header.seq = 0;
+
+    nh_.param<XmlRpc::XmlRpcValue>("markers", markers_list, markers_list);
+    for (int i = 0; i < markers_list.size(); i++) {
+      tf::Vector3 marker_translation(
+          static_cast<double>(markers_list[i]["pose"][0]),
+          static_cast<double>(markers_list[i]["pose"][1]),
+          static_cast<double>(markers_list[i]["pose"][2]));
+
+      tf::Quaternion marker_rotation(
+          static_cast<double>(markers_list[i]["pose"][3]),
+          static_cast<double>(markers_list[i]["pose"][4]),
+          static_cast<double>(markers_list[i]["pose"][5]),
+          static_cast<double>(markers_list[i]["pose"][6]));
+
+      int id = static_cast<int>(markers_list[i]["id"]);
+
+      tf::Transform marker_pose;
+      marker_pose.setOrigin(marker_translation);
+      marker_pose.setRotation(marker_rotation);
+      marker_poses_.insert({id, marker_pose});
+    }
+  }
+
+  bool marker_exists(int id) {
+    return marker_poses_.find(id) != marker_poses_.end();
   }
 
   bool getTransform(const std::string& refFrame, const std::string& childFrame, tf::StampedTransform& transform)
@@ -158,8 +187,9 @@ public:
     bool publishMarkersList = marker_list_pub_.getNumSubscribers() > 0;
     bool publishImage = image_pub_.getNumSubscribers() > 0;
     bool publishDebug = debug_pub_.getNumSubscribers() > 0;
+    bool publishApriltags = apriltag_pub_.getNumSubscribers() > 0;
 
-    if (!publishMarkers && !publishMarkersList && !publishImage && !publishDebug)
+    if (!publishMarkers && !publishMarkersList && !publishImage && !publishDebug && !publishApriltags)
       return;
     ROS_DEBUG("receiving image");
 
@@ -177,7 +207,7 @@ public:
       mDetector_.detect(inImage_, markers_, camParam_, marker_size_, false);
       ROS_DEBUG("number of markers detected: %d", (int)markers_.size());
       // marker array publish
-      if (publishMarkers)
+      if (publishMarkers || publishApriltags)
       {
         marker_msg_->markers.clear();
         marker_msg_->markers.resize(markers_.size());
@@ -250,7 +280,11 @@ public:
         if (marker_msg_->markers.size() > 0)
         {
           marker_pub_.publish(marker_msg_);
-          apriltag_pub_.publish(apriltags_msg_);
+          if (marker_exists(marker_msg_->markers.at(0).id))
+          {
+            ROS_INFO_STREAM("Marker ID: " << marker_msg_->markers.at(0).id << " detected.");
+            apriltag_pub_.publish(apriltags_msg_);
+          }
         }
       }
 
