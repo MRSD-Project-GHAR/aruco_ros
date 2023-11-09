@@ -11,9 +11,15 @@
     <arg name="robot_name"        default="locobot" />
     
     <node pkg="aruco_ros" type="odometry" name="odometry" output="screen">    
-        <remap from="/camera_info" to="/camera/color/camera_info" />
-        <remap from="/image" to="/camera/color/image_raw" />
-        <param name="image_is_rectified" value="True"/>
+	<!-- for locobot -->
+	<remap from="/camera_info" to="/locobot/camera/color/camera_info" />
+        <remap from="/image" to="/locobot/camera/color/image_raw" />
+	<!-- for locobot -->
+	<!-- original -->
+        <!--<remap from="/camera_info" to="/camera/color/camera_info" />-->
+        <!--<remap from="/image" to="/camera/color/image_raw" />-->
+        <!-- original --> 
+	<param name="image_is_rectified" value="True"/>
         <param name="marker_size" value="$(arg markerSize)"/>
         <param name="marker_id1" value="$(arg marker1Id)"/>
         <param name="marker_id2" value="$(arg marker2Id)"/>
