@@ -8,7 +8,7 @@
     <arg name="dct_filter_size"   default="2" />
     <arg name="marker1_frame"     default="marker_hand_frame" />
     <arg name="marker2_frame"     default="marker_object_frame" />
-
+    <arg name="robot_name"        default="locobot" />
     
     <node pkg="aruco_ros" type="odometry" name="odometry" output="screen">    
         <remap from="/camera_info" to="/camera/color/camera_info" />
@@ -22,6 +22,8 @@
         <param name="parent_name" value="stereo_gazebo_$(arg eye)_camera_optical_frame"/>
         <param name="child_name1" value="$(arg marker1_frame)" />
         <param name="child_name2" value="$(arg marker2_frame)" />
+        <param name="world_frame" value="$(arg robot_name)/odom" />
+        <param name="child_frame" value="$(arg robot_name)/base_link" />
         <rosparam file="$(find aruco_ros)/cfg/marker_poses.yaml" command="load" />
     </node>
 
