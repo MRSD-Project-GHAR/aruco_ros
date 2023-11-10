@@ -50,7 +50,11 @@ include_directories(
  add_executable(odometry src/odometry_pub.cpp
                        src/aruco_ros_utils.cpp)
 
+ add_executable(odometry_mod src/odometry_pub_modified.cpp
+                       src/aruco_ros_utils.cpp)
+
  target_link_libraries(odometry ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+ target_link_libraries(odometry_mod ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
  add_dependencies(double ${PROJECT_NAME}_gencfg)
  target_link_libraries(double ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
