@@ -196,7 +196,7 @@ private:
       for (int j = 0; j < markers.size(); j++) {
         tf::Transform camera_in_aruco1_frame = aruco_ros::arucoMarker2Tf(markers[i]).inverse();
         tf::Transform aruco2_in_camera_frame = aruco_ros::arucoMarker2Tf(markers[j]);
-        tf::Transform aruco2_in_aruco1_frame = camera_in_aruco1_frame * aruco2_in_aruco1_frame;
+        tf::Transform aruco2_in_aruco1_frame = camera_in_aruco1_frame * aruco2_in_camera_frame;
         
         // print the relative pose between marker i and marker j in x,y,z, r,p,y
         tf::Vector3 translation = aruco2_in_aruco1_frame.getOrigin();
