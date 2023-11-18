@@ -12,9 +12,15 @@ ros::Time last_odom_update;
 bool odom_received = false;
 
 void odomCallback(const nav_msgs::Odometry &msg) {
-  odom_received = true;
   last_odom_update = ros::Time::now();
   static int messages_discarded = 0;
+
+  if (!odom_received) {
+    filtered_odom = msg;
+    odom_received = true;
+    return;
+  }
+
   double x_diff = filtered_odom.pose.pose.position.x - msg.pose.pose.position.x;
   double y_diff = filtered_odom.pose.pose.position.y - msg.pose.pose.position.y;
   double z_diff = filtered_odom.pose.pose.position.z - msg.pose.pose.position.z;
