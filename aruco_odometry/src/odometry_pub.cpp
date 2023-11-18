@@ -60,7 +60,7 @@ public:
     odom.child_frame_id = robot_frame_;
     odom.header.seq = 0;
 
-    m_detector_.setDetectionMode(aruco::DM_VIDEO_FAST, 0.02);
+    m_detector_.setDetectionMode(aruco::DM_VIDEO_FAST, 0.0);
   }
 
   void camInfoCallback(const sensor_msgs::CameraInfo &msg) {
