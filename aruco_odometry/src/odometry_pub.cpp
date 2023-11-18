@@ -139,21 +139,21 @@ public:
         odom.header.seq++;
         odom_pub_.publish(odom);
 
-      tf2_msgs::TFMessage tf_msg;
+      // tf2_msgs::TFMessage tf_msg;
 
-      geometry_msgs::TransformStamped transform_stamped;
-      transform_stamped.header.stamp = ros::Time::now();
-      transform_stamped.header.frame_id = world_frame_;  // The parent frame
-      transform_stamped.child_frame_id = robot_frame_;     // The child frame
-      transform_stamped.transform.translation.x = odom.pose.pose.position.x;
-      transform_stamped.transform.translation.y = odom.pose.pose.position.y;
-      transform_stamped.transform.translation.z = odom.pose.pose.position.z;
-      transform_stamped.transform.rotation = odom.pose.pose.orientation;
+      // geometry_msgs::TransformStamped transform_stamped;
+      // transform_stamped.header.stamp = ros::Time::now();
+      // transform_stamped.header.frame_id = world_frame_;  // The parent frame
+      // transform_stamped.child_frame_id = robot_frame_;     // The child frame
+      // transform_stamped.transform.translation.x = odom.pose.pose.position.x;
+      // transform_stamped.transform.translation.y = odom.pose.pose.position.y;
+      // transform_stamped.transform.translation.z = odom.pose.pose.position.z;
+      // transform_stamped.transform.rotation = odom.pose.pose.orientation;
 
-      tf_msg.transforms.push_back(transform_stamped);
+      // tf_msg.transforms.push_back(transform_stamped);
 
       // Broadcast the TF message
-      tf_broadcaster_.sendTransform(tf_msg.transforms);
+      // tf_broadcaster_.sendTransform(tf_msg.transforms);
       }
 
       cv_bridge::CvImage out_msg;
@@ -221,7 +221,7 @@ private:
   nav_msgs::Odometry odom;
 
   std::unordered_map<int, tf::Transform> marker_poses_;
-  tf2_ros::TransformBroadcaster tf_broadcaster_;
+  // tf2_ros::TransformBroadcaster tf_broadcaster_;
 
   std::string robot_frame_;
   std::string world_frame_;
