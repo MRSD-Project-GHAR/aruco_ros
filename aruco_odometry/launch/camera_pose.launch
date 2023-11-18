@@ -1,36 +1,29 @@
 <launch>
 
-    <arg name="marker1Id"         default="582"/>
-    <arg name="marker2Id"         default="26"/>
-    <arg name="markerSize"        default="0.25"/>    <!-- in m -->
-    <arg name="eye"               default="left"/>
-    <arg name="dct_normalization" default="True" />
-    <arg name="dct_filter_size"   default="2" />
-    <arg name="marker1_frame"     default="marker_hand_frame" />
-    <arg name="marker2_frame"     default="marker_object_frame" />
-    <arg name="robot_name"        default="go1" />
-    
-    <node pkg="aruco_odometry" type="aruco_odometry_node" name="odometry" output="screen">    
-	<!-- for locobot -->
-	<remap from="/camera_info" to="/camera/color/camera_info" />
+    <arg name="smallMarkerSize" default="0.25" />    <!-- in m -->
+    <arg name="largeMarkerSize" default="0.905" />    <!-- in m -->
+    <arg name="robot_name" default="go1" />
+
+    <node pkg="aruco_odometry" type="aruco_odometry_node" name="large_marker_odometry"
+        output="screen">
+        <remap from="/camera_info" to="/camera/color/camera_info" />
         <remap from="/image" to="/camera/color/image_raw" />
-	<!-- for locobot -->
-	<!-- original -->
-        <!--<remap from="/camera_info" to="/camera/color/camera_info" />-->
-        <!--<remap from="/image" to="/camera/color/image_raw" />-->
-        <!-- original --> 
-	    <param name="image_is_rectified" value="True"/>
-        <param name="marker_size" value="$(arg markerSize)"/>
-        <param name="marker_id1" value="$(arg marker1Id)"/>
-        <param name="marker_id2" value="$(arg marker2Id)"/>
-        <param name="normalizeImage" value="$(arg dct_normalization)"/>
-        <param name="dct_components_to_remove" value="$(arg dct_filter_size)"/>
-        <param name="parent_name" value="stereo_gazebo_$(arg eye)_camera_optical_frame"/>
-        <param name="child_name1" value="$(arg marker1_frame)" />
-        <param name="child_name2" value="$(arg marker2_frame)" />
+        <param name="image_is_rectified" value="True" />
+        <param name="marker_size" value="$(arg largeMarkerSize)" />
         <param name="world_frame" value="world" />
         <param name="robot_frame" value="aruco_camera_link" />
-        <rosparam file="$(find aruco_odometry)/cfg/marker_poses.yaml" command="load" />
+        <rosparam file="$(find aruco_odometry)/cfg/large_marker_poses.yaml" command="load" />
+    </node>
+
+    <node pkg="aruco_odometry" type="aruco_odometry_node" name="small_marker_odometry"
+        output="screen">
+        <remap from="/camera_info" to="/camera/color/camera_info" />
+        <remap from="/image" to="/camera/color/image_raw" />
+        <param name="image_is_rectified" value="True" />
+        <param name="marker_size" value="$(arg smallMarkerSize)" />
+        <param name="world_frame" value="world" />
+        <param name="robot_frame" value="aruco_camera_link" />
+        <rosparam file="$(find aruco_odometry)/cfg/small_marker_poses.yaml" command="load" />
     </node>
 
     <node pkg="tf" type="static_transform_publisher" name="camera_to_base_link" args="0 0 0 0.5 -0.5 0.5 0.5 /aruco_camera_link /camera_link 100" />
