@@ -29,8 +29,9 @@
         <param name="child_name1" value="$(arg marker1_frame)" />
         <param name="child_name2" value="$(arg marker2_frame)" />
         <param name="world_frame" value="world" />
-        <param name="robot_frame" value="camera_link" />
+        <param name="robot_frame" value="aruco_camera_link" />
         <rosparam file="$(find aruco_odometry)/cfg/marker_poses.yaml" command="load" />
     </node>
 
+    <node pkg="tf" type="static_transform_publisher" name="camera_to_base_link" args="0 0 0 0.5 -0.5 0.5 0.5 /aruco_camera_link /camera_link 100" />
 </launch>

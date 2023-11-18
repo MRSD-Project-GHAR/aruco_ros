@@ -56,8 +56,8 @@ public:
     odom_pub_ = nh.advertise<nav_msgs::Odometry>("/odom", 1);
     cam_info_received_ = false;
 
-    odom.header.frame_id = "camera_link";
-    odom.child_frame_id = "odom";
+    odom.header.frame_id = world_frame_;
+    odom.child_frame_id = robot_frame_;
     odom.header.seq = 0;
 
     m_detector_.setDetectionMode(aruco::DM_VIDEO_FAST, 0.02);
