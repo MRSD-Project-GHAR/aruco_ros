@@ -1,0 +1,18 @@
+<launch>
+    <arg name="known_marker_size" default="0.25" />    <!-- in m -->
+    <arg name="unknown_marker_size" default="0.905" />    <!-- in m -->
+    <arg name="robot_name" default="go1" />
+
+    <node pkg="aruco_odometry" type="aruco_odometry_calc_node" name="aruco_calc_node"
+        output="screen">
+        <remap from="/camera_info" to="/camera/color/camera_info" />
+        <remap from="/image" to="/camera/color/image_raw" />
+        <param name="image_is_rectified" value="True" />
+        <param name="known_marker_size" value="$(arg known_marker_size)" />
+        <param name="unknown_marker_size" value="$(arg unknown_marker_size)" />
+        <param name="world_frame" value="world" />
+        <param name="robot_frame" value="aruco_camera_link" />
+        <rosparam file="$(find aruco_odometry)/cfg/known_markers.yaml" command="load" />
+        <rosparam file="$(find aruco_odometry)/cfg/unknown_markers.yaml" command="load" />
+    </node>
+</launch>

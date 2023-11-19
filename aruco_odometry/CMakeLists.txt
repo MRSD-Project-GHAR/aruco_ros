@@ -144,6 +144,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node src/odometry_pub.cpp)
+add_executable(${PROJECT_NAME}_calc_node src/aruco_pose_calculator.cpp)
 add_executable(${PROJECT_NAME}_filter_node src/odometry_filter.cpp)
 
 ## Rename C++ executable without prefix
@@ -162,6 +163,10 @@ target_link_libraries(${PROJECT_NAME}_node
 )
 
 target_link_libraries(${PROJECT_NAME}_filter_node
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(${PROJECT_NAME}_calc_node
   ${catkin_LIBRARIES}
 )
 
