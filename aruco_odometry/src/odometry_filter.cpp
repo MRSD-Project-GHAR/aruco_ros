@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 
     if (!odom_received ||
         (last_odom_update - ros::Time::now()).toSec() > time_threshold) {
-      ROS_WARN("No odom received");
+      // ROS_WARN("No odom received");
       continue;
     }
 
