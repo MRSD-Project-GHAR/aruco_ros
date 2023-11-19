@@ -31,8 +31,7 @@ public:
     nh.param<XmlRpc::XmlRpcValue>("unknown_markers", unknown_markers_list,
                                   unknown_markers_list);
 
-      printXMLRPCValueType(known_markers_list);
-
+    printXMLRPCValueType(known_markers_list);
 
     for (int i = 0; i < known_markers_list.size(); i++) {
       tf::Vector3 marker_translation(
@@ -123,7 +122,7 @@ public:
                          known_marker_size_, false);
       // for each marker, draw info and its boundaries in the image
       tf::Transform camera_in_world_frame;
-      ROS_INFO("Number of aruco markers detected: %d",
+      ROS_INFO("Number of known aruco markers detected: %d",
                int(known_markers.size()));
       std::vector<int> unknown_ids;
       bool odom_calculated = false;
@@ -137,9 +136,9 @@ public:
         if (known_marker_poses_.find(known_markers[i].id) ==
             known_marker_poses_.end()) {
 
-          ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
-                          << known_markers[i].id << "is unknown.");
-          unknown_ids.push_back(i);
+          // ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
+          //                 << known_markers[i].id << "is unknown.");
+          // unknown_ids.push_back(i);
           continue;
         }
 
@@ -151,6 +150,8 @@ public:
       }
 
       if (odom_calculated) {
+        ROS_INFO("Number of unknown aruco markers detected: %d",
+                 int(known_markers.size()));
         std::vector<aruco::Marker> unknown_markers;
         m_detector_.detect(in_image, unknown_markers, cam_param_,
                            unknown_marker_size_, false);
@@ -167,45 +168,25 @@ public:
             // ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
             //                 << markers[i].id << "is unknown.");
             // unknown_ids.push_back(i);
+            // ROS_WARN("This ")
+            ROS_WARN_STREAM("The marker with aruco id "
+                            << unknown_markers[i].id
+                            << ", is not in the unknown list");
             continue;
           }
 
           tf::Transform aruco_in_camera =
               aruco_ros::arucoMarker2Tf(unknown_markers[i]);
 
-          if (known_marker_poses_.find(unknown_markers[i].id) ==
-              known_marker_poses_.end()) {
-
-            // ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
-            //                 << markers[i].id << "is unknown.");
-            // unknown_ids.push_back(i);
-            continue;
-          }
-
           tf::Transform aruco_in_world_frame =
               camera_in_world_frame * aruco_in_camera;
-          //   known_marker_poses_.at(known_markers[i].id);
-          //   camera_in_world_frame = aruco_in_world_frame *
-          //   camera_in_aruco_frame; tf::poseTFToMsg(camera_in_world_frame,
-          //   odom.pose.pose); odom_calculated = true;
-
-          // ROS_WARN_STREAM(
-          //     "id: " << markers[index].id << ", pose is (x,y,z,qx,qy,qz,qw):
-          //     "
-          //            << aruco_pose.position.x << ", " <<
-          //            aruco_pose.position.y
-          //            << ", " << aruco_pose.position.z << ", "
-          //            << aruco_pose.orientation.x << ", "
-          //            << aruco_pose.orientation.y << ", "
-          //            << aruco_pose.orientation.z << ", "
-          //            << aruco_pose.orientation.w);
 
           geometry_msgs::Pose aruco_in_world_pose;
           tf::poseTFToMsg(aruco_in_world_frame, aruco_in_world_pose);
 
           std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-          std::cout << "- id: " << unknown_markers[i].id << "\n";
-          std::cout << "- pose: [" << aruco_in_world_pose.position.x << ", "
+          std::cout << "  - id: " << unknown_markers[i].id << "\n";
+          std::cout << "    pose: [" << aruco_in_world_pose.position.x << ", "
                     << aruco_in_world_pose.position.y << ", "
                     << aruco_in_world_pose.position.z << ", "
                     << aruco_in_world_pose.orientation.x << ", "
