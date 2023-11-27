@@ -185,6 +185,7 @@ public:
                  << new_yaw << "," << distance_diff << ","
                  << yaw_diff << "\n";
         odom_csv.close();
+        old_odom = odom;
       }
 
       cv_bridge::CvImage out_msg;
