@@ -61,6 +61,12 @@ public:
     odom.header.seq = 0;
 
     m_detector_.setDetectionMode(aruco::DM_VIDEO_FAST, 0.02);
+
+    std::ofstream odom_csv;
+    odom_csv.open("odom.csv", std::ios::out | std::ios::trunc);
+    odom_csv << "seq,id,time_stamp,x,y,yaw,distance_diff,yaw_diff\n";
+    odom_csv.close();
+    old_odom.pose.pose.orientation.w = 1;
   }
 
   void camInfoCallback(const sensor_msgs::CameraInfo &msg) {
@@ -157,8 +163,27 @@ public:
         // Broadcast the TF message
         tf_broadcaster_.sendTransform(tf_msg.transforms);
 
+        geometry_msgs::Quaternion q = odom.pose.pose.orientation;
+        float new_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y) , - 1.0 + 2.0 * (q.w * q.w + q.x * q.x));
+        
+        q = old_odom.pose.pose.orientation;
+        float old_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y) , - 1.0 + 2.0 * (q.w * q.w + q.x * q.x));
+        
+        float yaw_diff= new_yaw - old_yaw;
+        float distance_diff = sqrt(
+          pow((odom.pose.pose.position.x - old_odom.pose.pose.position.x), 2) +
+          pow((odom.pose.pose.position.y - old_odom.pose.pose.position.y), 2) +
+          pow((odom.pose.pose.position.z - old_odom.pose.pose.position.z), 2)
+        );
+
         std::ofstream odom_csv;
         odom_csv.open("odom.csv", std::ios::out | std::ios::app);
+        odom_csv << odom.header.seq << "," << final_marker_used << ","
+                 << odom.header.stamp.toNSec() << ","
+                 << odom.pose.pose.position.x << ","
+                 << odom.pose.pose.position.y << ","
+                 << new_yaw << "," << distance_diff << ","
+                 << yaw_diff << "\n";
         odom_csv.close();
       }
 
@@ -225,6 +250,7 @@ private:
   double marker_size_;
   aruco::CameraParameters cam_param_;
   nav_msgs::Odometry odom;
+  nav_msgs::Odometry old_odom;
 
   std::unordered_map<int, tf::Transform> marker_poses_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
