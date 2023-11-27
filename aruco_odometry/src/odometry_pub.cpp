@@ -1,5 +1,6 @@
 #include <aruco/aruco.h>
 #include <aruco/cvdrawingutils.h>
+#include <fstream>
 #include <iostream>
 
 #include <aruco_ros/aruco_ros_utils.h>
@@ -9,10 +10,9 @@
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/image_encodings.h>
-#include <unordered_map>
-#include <tf2_ros/transform_broadcaster.h>
 #include <tf2_msgs/TFMessage.h>
-
+#include <tf2_ros/transform_broadcaster.h>
+#include <unordered_map>
 
 class ArucoOdometry {
 public:
@@ -21,7 +21,7 @@ public:
     nh.param<double>("marker_size", marker_size_, 0.05);
     nh.param<std::string>("world_frame", world_frame_, "odom");
     nh.param<std::string>("robot_frame", robot_frame_, "base_link");
-    
+
     XmlRpc::XmlRpcValue markers_list;
 
     nh.param<XmlRpc::XmlRpcValue>("markers", markers_list, markers_list);
@@ -94,6 +94,7 @@ public:
       ROS_INFO("Number of aruco markers detected: %d", int(markers.size()));
       std::vector<int> unknown_ids;
       bool odom_calculated = false;
+      int final_marker_used = -1;
       for (unsigned int i = 0; i < markers.size(); i++) {
 
         markers[i].draw(in_image, cv::Scalar(0, 0, 255), 2);
@@ -113,6 +114,7 @@ public:
         camera_in_world_frame = aruco_in_world_frame * camera_in_aruco_frame;
         tf::poseTFToMsg(camera_in_world_frame, odom.pose.pose);
         odom_calculated = true;
+        final_marker_used = markers[i].id;
       }
 
       if (odom_calculated) {
@@ -134,26 +136,30 @@ public:
                      << aruco_pose.orientation.z << ", "
                      << aruco_pose.orientation.w);
         }
-        
+
         odom.header.stamp = ros::Time::now();
         odom.header.seq++;
         odom_pub_.publish(odom);
 
-      tf2_msgs::TFMessage tf_msg;
+        tf2_msgs::TFMessage tf_msg;
 
-      geometry_msgs::TransformStamped transform_stamped;
-      transform_stamped.header.stamp = ros::Time::now();
-      transform_stamped.header.frame_id = world_frame_;  // The parent frame
-      transform_stamped.child_frame_id = robot_frame_;     // The child frame
-      transform_stamped.transform.translation.x = odom.pose.pose.position.x;
-      transform_stamped.transform.translation.y = odom.pose.pose.position.y;
-      transform_stamped.transform.translation.z = odom.pose.pose.position.z;
-      transform_stamped.transform.rotation = odom.pose.pose.orientation;
+        geometry_msgs::TransformStamped transform_stamped;
+        transform_stamped.header.stamp = ros::Time::now();
+        transform_stamped.header.frame_id = world_frame_; // The parent frame
+        transform_stamped.child_frame_id = robot_frame_;  // The child frame
+        transform_stamped.transform.translation.x = odom.pose.pose.position.x;
+        transform_stamped.transform.translation.y = odom.pose.pose.position.y;
+        transform_stamped.transform.translation.z = odom.pose.pose.position.z;
+        transform_stamped.transform.rotation = odom.pose.pose.orientation;
 
-      tf_msg.transforms.push_back(transform_stamped);
+        tf_msg.transforms.push_back(transform_stamped);
 
-      // Broadcast the TF message
-      tf_broadcaster_.sendTransform(tf_msg.transforms);
+        // Broadcast the TF message
+        tf_broadcaster_.sendTransform(tf_msg.transforms);
+
+        std::ofstream odom_csv;
+        odom_csv.open("odom.csv", std::ios::out | std::ios::app);
+        odom_csv.close();
       }
 
       cv_bridge::CvImage out_msg;
