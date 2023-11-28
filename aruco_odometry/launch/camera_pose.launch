@@ -13,6 +13,7 @@
         <param name="world_frame" value="world" />
         <param name="robot_frame" value="aruco_camera_link" />
         <rosparam file="$(find aruco_odometry)/cfg/large_marker_poses.yaml" command="load" />
+        <param name="debug" value="false" />
     </node>
 
     <node pkg="aruco_odometry" type="aruco_odometry_node" name="small_marker_odometry"
@@ -24,6 +25,7 @@
         <param name="world_frame" value="world" />
         <param name="robot_frame" value="aruco_camera_link" />
         <rosparam file="$(find aruco_odometry)/cfg/small_marker_poses.yaml" command="load" />
+        <param name="debug" value="false" />
     </node>
     
   <!-- <node pkg="aruco_odometry" type="aruco_odometry_filter_node" name="odometry_filter" output="screen" >

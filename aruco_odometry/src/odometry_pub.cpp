@@ -23,6 +23,7 @@ public:
     nh.param<std::string>("robot_frame", robot_frame_, "base_link");
     nh.param<double>("distance_factor_threshold", distance_factor_threshold_,
                      28.0);
+    nh.param<bool>("debug", debug_, true);
 
     XmlRpc::XmlRpcValue markers_list;
 
@@ -99,7 +100,13 @@ public:
       m_detector_.detect(in_image, markers, cam_param_, marker_size_, false);
       // for each marker, draw info and its boundaries in the image
       tf::Transform camera_in_world_frame;
-      ROS_INFO("Number of aruco markers detected: %d", int(markers.size()));
+      if (int(markers.size()) == 0) {
+        ROS_WARN("No markers detected!");
+      }
+
+      if (debug_) {
+        ROS_INFO("Number of aruco markers detected: %d", int(markers.size()));
+      }
       std::vector<int> unknown_ids;
       bool odom_calculated = false;
       int final_marker_used = -1;
@@ -109,9 +116,10 @@ public:
             aruco_ros::arucoMarker2Tf(markers[i]).inverse();
 
         if (marker_poses_.find(markers[i].id) == marker_poses_.end()) {
-
-          ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
-                          << markers[i].id << "is unknown.");
+          if (debug_) {
+            ROS_WARN_STREAM("The pose of the marker with Aruco ID: "
+                            << markers[i].id << "is unknown.");
+          }
           unknown_ids.push_back(i);
           continue;
         }
@@ -121,16 +129,13 @@ public:
         nav_msgs::Odometry dummy_odom;
         tf::poseTFToMsg(camera_in_world_frame, dummy_odom.pose.pose);
         double distance = camera_in_aruco_frame.getOrigin().length();
-        
+
         if (isWithinBounds(dummy_odom) &&
             ((distance / marker_size_) < (distance_factor_threshold_))) {
-          ROS_INFO_STREAM("Aruco id " << markers[i].id << " is at a distance of " << distance);
           odom.pose = dummy_odom.pose;
           odom_calculated = true;
           final_marker_used = markers[i].id;
           markers[i].draw(in_image, cv::Scalar(0, 0, 255), 5);
-        } else {
-          ROS_WARN_STREAM("Aruco id " << markers[i].id << " is at a higher distance of " << distance);
         }
       }
 
@@ -144,14 +149,16 @@ public:
 
           geometry_msgs::Pose aruco_pose;
           tf::poseTFToMsg(aruco_in_world_frame, aruco_pose);
-          ROS_WARN_STREAM(
-              "Id: " << markers[index].id << ", pose is (x,y,z,qx,qy,qz,qw): "
-                     << aruco_pose.position.x << ", " << aruco_pose.position.y
-                     << ", " << aruco_pose.position.z << ", "
-                     << aruco_pose.orientation.x << ", "
-                     << aruco_pose.orientation.y << ", "
-                     << aruco_pose.orientation.z << ", "
-                     << aruco_pose.orientation.w);
+          if (debug_) {
+            ROS_WARN_STREAM(
+                "Id: " << markers[index].id << ", pose is (x,y,z,qx,qy,qz,qw): "
+                       << aruco_pose.position.x << ", " << aruco_pose.position.y
+                       << ", " << aruco_pose.position.z << ", "
+                       << aruco_pose.orientation.x << ", "
+                       << aruco_pose.orientation.y << ", "
+                       << aruco_pose.orientation.z << ", "
+                       << aruco_pose.orientation.w);
+          }
         }
 
         odom.header.stamp = ros::Time::now();
@@ -281,6 +288,7 @@ private:
   ros::Publisher odom_pub_;
   double marker_size_;
   double distance_factor_threshold_;
+  bool debug_;
   aruco::CameraParameters cam_param_;
   nav_msgs::Odometry odom;
   nav_msgs::Odometry old_odom;
