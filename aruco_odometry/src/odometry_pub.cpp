@@ -208,12 +208,13 @@ public:
         odom_csv.close();
         old_odom = odom;
       }
-
-      cv_bridge::CvImage out_msg;
-      out_msg.header.stamp = ros::Time::now();
-      out_msg.encoding = sensor_msgs::image_encodings::RGB8;
-      out_msg.image = in_image;
-      image_pub_.publish(out_msg.toImageMsg());
+      if (debug_) {
+        cv_bridge::CvImage out_msg;
+        out_msg.header.stamp = ros::Time::now();
+        out_msg.encoding = sensor_msgs::image_encodings::RGB8;
+        out_msg.image = in_image;
+        image_pub_.publish(out_msg.toImageMsg());
+      }
     }
   }
 
@@ -263,16 +264,16 @@ private:
 
   bool isWithinBounds(const nav_msgs::Odometry &odom) {
     auto position = odom.pose.pose.position;
-    if ((position.x > 7.5) || (position.x < -7.5)) {
+    if ((position.x > 7.3) || (position.x < -7.3)) {
       return false;
     }
 
-    if ((position.y > 6.75) || (position.y < -6.75)) {
+    if ((position.y > 6.45) || (position.y < -6.45)) {
       return false;
     }
 
-    if ((position.x > -3.75) && (position.x < 4.5) && (position.y > -3.5) &&
-        (position.y < 3.75)) {
+    if ((position.x > -3.95) && (position.x < 4.7) && (position.y > -3.7) &&
+        (position.y < 3.95)) {
       return false;
     }
     return true;
