@@ -122,7 +122,7 @@ public:
         tf::poseTFToMsg(camera_in_world_frame, dummy_odom.pose.pose);
         
         if (isWithinBounds(dummy_odom)) {
-          odom = dummy_odom;
+          odom.pose = dummy_odom.pose;
           odom_calculated = true;
           final_marker_used = markers[i].id;
         }
@@ -153,23 +153,21 @@ public:
         odom.header.seq++;
         odom_pub_.publish(odom);
 
-        // tf2_msgs::TFMessage tf_msg;
+        tf2_msgs::TFMessage tf_msg;
 
-        // geometry_msgs::TransformStamped transform_stamped;
-        // transform_stamped.header.stamp = ros::Time::now();
-        // transform_stamped.header.frame_id = world_frame_; // The parent frame
-        // transform_stamped.child_frame_id = robot_frame_;  // The child frame
-        // transform_stamped.transform.translation.x =
-        // odom.pose.pose.position.x; transform_stamped.transform.translation.y
-        // = odom.pose.pose.position.y;
-        // transform_stamped.transform.translation.z =
-        // odom.pose.pose.position.z; transform_stamped.transform.rotation =
-        // odom.pose.pose.orientation;
+        geometry_msgs::TransformStamped transform_stamped;
+        transform_stamped.header.stamp = ros::Time::now();
+        transform_stamped.header.frame_id = world_frame_;  // The parent frame
+        transform_stamped.child_frame_id = robot_frame_;   // The child frame
+        transform_stamped.transform.translation.x = odom.pose.pose.position.x;
+        transform_stamped.transform.translation.y = odom.pose.pose.position.y;
+        transform_stamped.transform.translation.z = odom.pose.pose.position.z;
+        transform_stamped.transform.rotation = odom.pose.pose.orientation;
 
-        // tf_msg.transforms.push_back(transform_stamped);
+        tf_msg.transforms.push_back(transform_stamped);
 
-        // // Broadcast the TF message
-        // tf_broadcaster_.sendTransform(tf_msg.transforms);
+        // Broadcast the TF message
+        tf_broadcaster_.sendTransform(tf_msg.transforms);
 
         geometry_msgs::Quaternion q = odom.pose.pose.orientation;
         float new_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y),
