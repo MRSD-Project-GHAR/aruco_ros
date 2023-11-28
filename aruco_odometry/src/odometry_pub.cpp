@@ -118,9 +118,15 @@ public:
 
         tf::Transform aruco_in_world_frame = marker_poses_.at(markers[i].id);
         camera_in_world_frame = aruco_in_world_frame * camera_in_aruco_frame;
-        tf::poseTFToMsg(camera_in_world_frame, odom.pose.pose);
-        odom_calculated = true;
-        final_marker_used = markers[i].id;
+        nav_msgs::Odometry dummy_odom;
+        tf::poseTFToMsg(camera_in_world_frame, dummy_odom.pose.pose);
+        
+        if (isWithinBounds(dummy_odom)) {
+          odom = dummy_odom;
+          odom_calculated = true;
+          final_marker_used = markers[i].id;
+        }
+        
       }
 
       if (odom_calculated) {
@@ -147,43 +153,48 @@ public:
         odom.header.seq++;
         odom_pub_.publish(odom);
 
-        tf2_msgs::TFMessage tf_msg;
+        // tf2_msgs::TFMessage tf_msg;
 
-        geometry_msgs::TransformStamped transform_stamped;
-        transform_stamped.header.stamp = ros::Time::now();
-        transform_stamped.header.frame_id = world_frame_; // The parent frame
-        transform_stamped.child_frame_id = robot_frame_;  // The child frame
-        transform_stamped.transform.translation.x = odom.pose.pose.position.x;
-        transform_stamped.transform.translation.y = odom.pose.pose.position.y;
-        transform_stamped.transform.translation.z = odom.pose.pose.position.z;
-        transform_stamped.transform.rotation = odom.pose.pose.orientation;
+        // geometry_msgs::TransformStamped transform_stamped;
+        // transform_stamped.header.stamp = ros::Time::now();
+        // transform_stamped.header.frame_id = world_frame_; // The parent frame
+        // transform_stamped.child_frame_id = robot_frame_;  // The child frame
+        // transform_stamped.transform.translation.x =
+        // odom.pose.pose.position.x; transform_stamped.transform.translation.y
+        // = odom.pose.pose.position.y;
+        // transform_stamped.transform.translation.z =
+        // odom.pose.pose.position.z; transform_stamped.transform.rotation =
+        // odom.pose.pose.orientation;
 
-        tf_msg.transforms.push_back(transform_stamped);
+        // tf_msg.transforms.push_back(transform_stamped);
 
-        // Broadcast the TF message
-        tf_broadcaster_.sendTransform(tf_msg.transforms);
+        // // Broadcast the TF message
+        // tf_broadcaster_.sendTransform(tf_msg.transforms);
 
         geometry_msgs::Quaternion q = odom.pose.pose.orientation;
-        float new_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y) , - 1.0 + 2.0 * (q.w * q.w + q.x * q.x));
-        
+        float new_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y),
+                              -1.0 + 2.0 * (q.w * q.w + q.x * q.x));
+
         q = old_odom.pose.pose.orientation;
-        float old_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y) , - 1.0 + 2.0 * (q.w * q.w + q.x * q.x));
-        
-        float yaw_diff= new_yaw - old_yaw;
+        float old_yaw = atan2(2.0 * (q.z * q.w + q.x * q.y),
+                              -1.0 + 2.0 * (q.w * q.w + q.x * q.x));
+
+        float yaw_diff = new_yaw - old_yaw;
         float distance_diff = sqrt(
-          pow((odom.pose.pose.position.x - old_odom.pose.pose.position.x), 2) +
-          pow((odom.pose.pose.position.y - old_odom.pose.pose.position.y), 2) +
-          pow((odom.pose.pose.position.z - old_odom.pose.pose.position.z), 2)
-        );
+            pow((odom.pose.pose.position.x - old_odom.pose.pose.position.x),
+                2) +
+            pow((odom.pose.pose.position.y - old_odom.pose.pose.position.y),
+                2) +
+            pow((odom.pose.pose.position.z - old_odom.pose.pose.position.z),
+                2));
 
         std::ofstream odom_csv;
         odom_csv.open("odom.csv", std::ios::out | std::ios::app);
         odom_csv << odom.header.seq << "," << final_marker_used << ","
                  << odom.header.stamp.toNSec() << ","
                  << odom.pose.pose.position.x << ","
-                 << odom.pose.pose.position.y << ","
-                 << new_yaw << "," << distance_diff << ","
-                 << yaw_diff << "\n";
+                 << odom.pose.pose.position.y << "," << new_yaw << ","
+                 << distance_diff << "," << yaw_diff << "\n";
         odom_csv.close();
         old_odom = odom;
       }
@@ -238,6 +249,23 @@ private:
     default:
       break;
     }
+  }
+
+  bool isWithinBounds(const nav_msgs::Odometry &odom) {
+    auto position = odom.pose.pose.position;
+    if ((position.x > 7.5) || (position.x < -7.5)) {
+      return false;
+    }
+
+    if ((position.y > 6.75) || (position.y < -6.75)) {
+      return false;
+    }
+
+    if ((position.x > -3.75) && (position.x < 4.5) && (position.y > -3.5) &&
+        (position.y < 3.75)) {
+      return false;
+    }
+    return true;
   }
 
   bool use_rectified_image_;

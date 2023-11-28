@@ -26,10 +26,12 @@
         <rosparam file="$(find aruco_odometry)/cfg/small_marker_poses.yaml" command="load" />
     </node>
     
-   <!-- <node pkg="aruco_odometry" type="aruco_odometry_filter_node" name="odometry_filter" output="screen" >
+   <node pkg="aruco_odometry" type="aruco_odometry_filter_node" name="odometry_filter" output="screen" >
         <param name="world_frame"    value="world" />
         <param name="robot_frame"    value="aruco_camera_link" />
-    </node> -->
+        <param name="max_msgs_to_discard" value="60" />
+        <param name="distance_threshold"  value="1.0" />
+    </node>
 
     <node pkg="tf" type="static_transform_publisher" name="camera_to_base_link" args="0 0 0 0.5 -0.5 0.5 0.5 /aruco_camera_link /camera_link 100" />
 </launch>
