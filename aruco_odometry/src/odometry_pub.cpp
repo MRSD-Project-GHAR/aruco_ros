@@ -21,6 +21,8 @@ public:
     nh.param<double>("marker_size", marker_size_, 0.05);
     nh.param<std::string>("world_frame", world_frame_, "odom");
     nh.param<std::string>("robot_frame", robot_frame_, "base_link");
+    nh.param<double>("distance_factor_threshold", distance_factor_threshold_,
+                     28.0);
 
     XmlRpc::XmlRpcValue markers_list;
 
@@ -102,9 +104,7 @@ public:
       bool odom_calculated = false;
       int final_marker_used = -1;
       for (unsigned int i = 0; i < markers.size(); i++) {
-
-        markers[i].draw(in_image, cv::Scalar(0, 0, 255), 2);
-
+        markers[i].draw(in_image, cv::Scalar(255, 0, 0), 2);
         tf::Transform camera_in_aruco_frame =
             aruco_ros::arucoMarker2Tf(markers[i]).inverse();
 
@@ -120,13 +120,18 @@ public:
         camera_in_world_frame = aruco_in_world_frame * camera_in_aruco_frame;
         nav_msgs::Odometry dummy_odom;
         tf::poseTFToMsg(camera_in_world_frame, dummy_odom.pose.pose);
+        double distance = camera_in_aruco_frame.getOrigin().length();
         
-        if (isWithinBounds(dummy_odom)) {
+        if (isWithinBounds(dummy_odom) &&
+            ((distance / marker_size_) < (distance_factor_threshold_))) {
+          ROS_INFO_STREAM("Aruco id " << markers[i].id << " is at a distance of " << distance);
           odom.pose = dummy_odom.pose;
           odom_calculated = true;
           final_marker_used = markers[i].id;
+          markers[i].draw(in_image, cv::Scalar(0, 0, 255), 5);
+        } else {
+          ROS_WARN_STREAM("Aruco id " << markers[i].id << " is at a higher distance of " << distance);
         }
-        
       }
 
       if (odom_calculated) {
@@ -157,8 +162,8 @@ public:
 
         geometry_msgs::TransformStamped transform_stamped;
         transform_stamped.header.stamp = ros::Time::now();
-        transform_stamped.header.frame_id = world_frame_;  // The parent frame
-        transform_stamped.child_frame_id = robot_frame_;   // The child frame
+        transform_stamped.header.frame_id = world_frame_; // The parent frame
+        transform_stamped.child_frame_id = robot_frame_;  // The child frame
         transform_stamped.transform.translation.x = odom.pose.pose.position.x;
         transform_stamped.transform.translation.y = odom.pose.pose.position.y;
         transform_stamped.transform.translation.z = odom.pose.pose.position.z;
@@ -275,6 +280,7 @@ private:
   image_transport::Publisher debug_image_pub_;
   ros::Publisher odom_pub_;
   double marker_size_;
+  double distance_factor_threshold_;
   aruco::CameraParameters cam_param_;
   nav_msgs::Odometry odom;
   nav_msgs::Odometry old_odom;
